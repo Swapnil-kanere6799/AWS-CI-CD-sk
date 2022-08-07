@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resourse:
+  CodeBuildServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: CodeBuildAccessPolicy
+                Effect: Allow
+                Action:
+                  - 'codebuild:*'
+                Resource: '*'
+              - Sid: CodeBuildRolePolicy
+                Effect: Allow
+                Action:
+                  - 'iam:PassRole'
+                Resource: 'arn:aws:iam::account-ID:role/role-name'
+              - Sid: CloudWatchLogsAccessPolicy
+                Effect: Allow
+                Action:
+                  - 'logs:FilterLogEvents'
+                  - 'logs:GetLogEvents'
+                Resource: '*'
+              - Sid: S3AccessPolicy
+                Effect: Allow
+                Action:
+                  - 's3:CreateBucket'
+                  - 's3:GetObject'
+                  - 's3:List*'
+                  - 's3:PutObject'
+                Resource: '*'
+              - Sid: S3BucketIdentity
+                Effect: Allow
+                Action:
+                  - 's3:GetBucketAcl'
+                  - 's3:GetBucketLocation'
+                Resource: '*'
+  CodeBuildSourceCredential:
+    Type: 'AWS::CodeBuild::SourceCredential'
+    Properties:
+      AuthType: PERSONAL_ACCESS_TOKEN
+      ServerType: GITHUB
+      Token: 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
+  CodeBuildProject:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      Name: !Ref 'AWS::StackName'
+      ServiceRole: !Ref CodeBuildServiceRole.Arn
+      Source:
+        Type: GITHUB
+        Location: !Sub 'https://github.com/Swapnil-kanere6799/AWS-CI-CD-sk.git'
+        BuildSpec: buildspec.yaml
+        Auth:
+          Type: OAUTH
+          Resource: !Ref CodeBuildSourceCredential
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: >-
+                PULL_REQUEST_CREATED, PULL_REQUEST_UPDATED,
+                PULL_REQUEST_REOPENED, PULL_REQUEST_MERGED,
+            - Type: BASE_REF
+              Pattern: !Sub ^refs/heads/$master$
+          - - Type: EVENT
+              Pattern: PUSH
+            - Type: HEAD_REF
+              Pattern: ^refs/tags/.*
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0         
