@@ -34,7 +34,7 @@ Resourse:
                   - 'logs:GetLogEvents'
                 Resource: '*'
               - Sid: S3AccessPolicy
-                Effect: Allow
+                Effect: Deny
                 Action:
                   - 's3:CreateBucket'
                   - 's3:GetObject'
